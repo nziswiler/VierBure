@@ -24,6 +24,7 @@ final class ScoreboardViewModel: ObservableObject {
     @Published var selected: (round: Int, playerIndex: Int)? = nil
 
     private let namesDefaultsKey = "Scoreboard.AllNames"
+    private let matchTopValue = -257
     @Published var allNames: [String]
 
     init(playerCount: Int = 4) {
@@ -142,7 +143,7 @@ final class ScoreboardViewModel: ObservableObject {
         let r = sel.round
         let p = sel.playerIndex
         // Set to a high negative value to indicate a "match" (losing all points)
-        players[p].scores[r].top = -257
+        players[p].scores[r].top = matchTopValue
     }
 
     // MARK: - Row state helpers
@@ -155,11 +156,20 @@ final class ScoreboardViewModel: ObservableObject {
             round < p.scores.count && p.scores[round].top != nil
         }
     }
+    
+    private func hasMatch(in round: Int) -> Bool {
+        players.contains { p in
+            round < p.scores.count && p.scores[round].top == matchTopValue
+        }
+    }
 
     func isRowInvalid(_ r: Int) -> Bool {
         // Only validate completed/previous rounds (there exists a newer round)
         guard r < rounds - 1 else { return false }
         
+        // Special case: a 'Match' (-257) makes the round valid regardless of sum
+        if hasMatch(in: r) { return false }
+
         // Calculate sum of top values in this round
         let sumTop = players.reduce(0) { partial, p in
             partial + (r < p.scores.count ? (p.scores[r].top ?? 0) : 0)
@@ -348,6 +358,8 @@ final class ScoreboardViewModel: ObservableObject {
             Spacer()
 
             Button {
+                dismissKeyboard()
+                vm.selected = nil
                 vm.addRound()
             } label: {
                 HStack(spacing: 6) {
