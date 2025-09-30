@@ -24,7 +24,7 @@ final class ScoreboardViewModel: ObservableObject {
     @Published var selected: (round: Int, playerIndex: Int)? = nil
 
     private let namesDefaultsKey = "Scoreboard.AllNames"
-    private var allNames: [String]
+    @Published var allNames: [String]
 
     init(playerCount: Int = 4) {
         let defaultNames = ["Spieler 1", "Spieler 2", "Spieler 3", "Spieler 4", "Spieler 5", "Spieler 6"]
@@ -71,8 +71,10 @@ final class ScoreboardViewModel: ObservableObject {
     func addRound() { rounds += 1; ensureScoreCapacity() }
     func removeLastRound() { rounds = max(0, rounds - 1); ensureScoreCapacity() }
     func resetScores() {
-        for i in players.indices { players[i].scores = Array(repeating: RoundScore(), count: rounds) }
+        rounds = 0 // Reset rounds to zero
+        for i in players.indices { players[i].scores = [] } // Clear all scores
         selected = nil
+        ensureScoreCapacity() // Ensure consistency
     }
 
     func setName(_ name: String, for index: Int) {
@@ -157,11 +159,13 @@ final class ScoreboardViewModel: ObservableObject {
     func isRowInvalid(_ r: Int) -> Bool {
         // Only validate completed/previous rounds (there exists a newer round)
         guard r < rounds - 1 else { return false }
-        // Only flag if the row has actually been played/entered
-        guard hasAnyTopValue(in: r) else { return false }
+        
+        // Calculate sum of top values in this round
         let sumTop = players.reduce(0) { partial, p in
             partial + (r < p.scores.count ? (p.scores[r].top ?? 0) : 0)
         }
+        
+        // Row is invalid if sum doesn't equal 157 (regardless of whether values were entered)
         return sumTop != 157
     }
 
@@ -238,34 +242,74 @@ final class ScoreboardViewModel: ObservableObject {
     private func scoreRow(for round: Int) -> some View {
         let isEditable = vm.isRowEditable(round)
         let isInvalid = vm.isRowInvalid(round)
+        let isCompleted = !isEditable && !isInvalid && round < vm.rounds - 1 // Previous round with correct sum
         
         return HStack(spacing: 0) {
-            Text("\(round + 1)")
-                .font(.caption2).foregroundStyle(.secondary)
-                .frame(width: 10, alignment: .leading)
+            // Round number with state color indication (left side)
+            ZStack {
+                Text("\(round + 1)")
+                    .font(.caption2.weight(isInvalid ? .semibold : .regular))
+                    .foregroundStyle(
+                        isInvalid ? .red : 
+                        isCompleted ? .green :
+                        isEditable ? .blue : .secondary
+                    )
+            }
+            .frame(width: 20, alignment: .center)
             
             HStack(spacing: 6) {
                 ForEach(Array(vm.players.enumerated()), id: \.element.id) { (idx, _) in
-                    scoreCell(round: round, playerIndex: idx, isEditable: isEditable)
+                    scoreCell(round: round, playerIndex: idx, isEditable: isEditable, isRowInvalid: isInvalid)
                 }
             }
+            
+            // Right spacer for symmetry with state icons
+            ZStack {
+                // State indicator icons
+                if isInvalid {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.red)
+                        .opacity(0.9)
+                        .animation(.easeInOut(duration: 0.2), value: isInvalid)
+                } else if isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.green)
+                        .opacity(0.8)
+                        .animation(.easeInOut(duration: 0.2), value: isCompleted)
+                } else if isEditable {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.blue)
+                        .opacity(0.8)
+                        .animation(.easeInOut(duration: 0.2), value: isEditable)
+                }
+            }
+            .frame(width: 20, alignment: .center)
         }
         .padding(.vertical, 2)
-        .padding(.horizontal, 0)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isInvalid ? Color.red.opacity(0.08) : Color.clear)
-                .padding(.horizontal, isInvalid ? -8 : 0)
+                .fill(
+                    // Only show background for error cases
+                    isInvalid ? 
+                    AnyShapeStyle(LinearGradient(
+                        colors: [Color.red.opacity(0.06), Color.red.opacity(0.02)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ).opacity(0.7)) : 
+                    AnyShapeStyle(Color.clear)
+                )
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(isInvalid ? Color.red.opacity(0.25) : Color.clear, lineWidth: 1)
-                .padding(.horizontal, isInvalid ? -8 : 0)
+        .accessibilityHint(
+            isInvalid ? "Fehler: Summe oben ist nicht 157" :
+            isCompleted ? "Runde korrekt abgeschlossen" :
+            isEditable ? "Aktive Runde - kann bearbeitet werden" : ""
         )
-        .accessibilityHint(isInvalid ? "Fehler: Summe oben ist nicht 157" : "")
     }
     
-    private func scoreCell(round: Int, playerIndex: Int, isEditable: Bool) -> some View {
+    private func scoreCell(round: Int, playerIndex: Int, isEditable: Bool, isRowInvalid: Bool) -> some View {
         DoubleScoreCell(
             topText: vm.topBinding(round: round, player: playerIndex),
             isEnabled: isEditable,
@@ -321,7 +365,7 @@ final class ScoreboardViewModel: ObservableObject {
 
     private var headerRow: some View {
         HStack(spacing: 0) {
-            Spacer(minLength: 10).frame(width: 10)
+            Spacer(minLength: 20).frame(width: 20)
             HStack(spacing: 6) {
                 ForEach(Array(vm.players.enumerated()), id: \.element.id) { (_, player) in
                     Text(player.name)
@@ -331,6 +375,7 @@ final class ScoreboardViewModel: ObservableObject {
                         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
             }
+            Spacer(minLength: 20).frame(width: 20) // Right-side gap to align with icon column in score rows
         }
         .accessibilityElement(children: .contain)
     }
@@ -356,6 +401,7 @@ final class ScoreboardViewModel: ObservableObject {
                             )
                     }
                 }
+                Spacer(minLength: 20).frame(width: 20)
             }
         )
     }
@@ -550,7 +596,7 @@ private struct KeyboardConfiguration {
         case ..<340:  // iPhone SE
             spacing = 4
             keyHeight = 48
-            digitKeyHeight = 48  // Same as other keys for iOS consistency
+            digitKeyHeight = 44  // Slightly larger like Apple keyboard
             cornerRadius = 8
             containerPadding = 8
             digitFont = .system(size: 18, weight: .medium, design: .rounded)
@@ -558,7 +604,7 @@ private struct KeyboardConfiguration {
         case ..<390:  // Standard iPhone
             spacing = 6
             keyHeight = 52
-            digitKeyHeight = 52  // Same as other keys for iOS consistency
+            digitKeyHeight = 44  // Slightly larger like Apple keyboard
             cornerRadius = 10
             containerPadding = 12
             digitFont = .system(size: 20, weight: .medium, design: .rounded)
@@ -566,7 +612,7 @@ private struct KeyboardConfiguration {
         case ..<768:  // Large iPhone
             spacing = 8
             keyHeight = 56
-            digitKeyHeight = 56  // Same as other keys for iOS consistency
+            digitKeyHeight = 44  // Slightly larger like Apple keyboard
             cornerRadius = 12
             containerPadding = 16
             digitFont = .system(size: 22, weight: .medium, design: .rounded)
@@ -574,7 +620,7 @@ private struct KeyboardConfiguration {
         default:      // iPad
             spacing = 10
             keyHeight = 64
-            digitKeyHeight = 64  // Same as other keys for iOS consistency
+            digitKeyHeight = 48  // Slightly larger like Apple keyboard for iPad
             cornerRadius = 14
             containerPadding = 20
             digitFont = .system(size: 24, weight: .medium, design: .rounded)
@@ -628,11 +674,11 @@ private struct KeyboardButton: View {
         Button(action: action) {
             ZStack {
                 // Primary background with Liquid Glass effect
-                RoundedRectangle(cornerRadius: config.cornerRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: keyCornerRadius, style: .continuous)
                     .fill(backgroundMaterial)
                     .overlay {
                         // Subtle inner highlight for glass effect
-                        RoundedRectangle(cornerRadius: config.cornerRadius, style: .continuous)
+                        RoundedRectangle(cornerRadius: keyCornerRadius, style: .continuous)
                             .stroke(
                                 LinearGradient(
                                     colors: [
@@ -697,21 +743,26 @@ private struct KeyboardButton: View {
             // Clean white/light background for digits with subtle glass effect
             return AnyShapeStyle(Material.regular)
         case .increment:
-            // Blue glass effect with transparency
-            return AnyShapeStyle(Color(.systemBlue).opacity(0.12).blendMode(.normal))
-        case .decrement:
-            // Orange glass effect with transparency  
-            return AnyShapeStyle(Color(.systemOrange).opacity(0.12).blendMode(.normal))
-        case .special:
-            // Red glass effect with transparency
+            // Red glass effect with transparency (Plus buttons)
             return AnyShapeStyle(Color(.systemRed).opacity(0.12).blendMode(.normal))
-        case .success:
-            // Green glass effect with transparency
+        case .decrement:
+            // Green glass effect with transparency (Minus buttons)  
             return AnyShapeStyle(Color(.systemGreen).opacity(0.12).blendMode(.normal))
+        case .special:
+            // Orange glass effect with transparency (Rest button)
+            return AnyShapeStyle(Color(.systemOrange).opacity(0.12).blendMode(.normal))
+        case .success:
+            // Blue glass effect with transparency (Match button)
+            return AnyShapeStyle(Color(.systemBlue).opacity(0.12).blendMode(.normal))
         case .control:
             // Slightly darker glass material for control keys
             return AnyShapeStyle(Material.thick)
         }
+    }
+    
+    private var keyCornerRadius: CGFloat {
+        // Use smaller corner radius for digit keys to match Apple keyboard
+        return style == .digit ? 6 : config.cornerRadius
     }
     
     private var textColor: Color {
@@ -719,13 +770,13 @@ private struct KeyboardButton: View {
         case .digit:
             return .primary
         case .increment:
-            return Color(.systemBlue)
-        case .decrement:
-            return Color(.systemOrange)
-        case .special:
             return Color(.systemRed)
-        case .success:
+        case .decrement:
             return Color(.systemGreen)
+        case .special:
+            return Color(.systemOrange)
+        case .success:
+            return Color(.systemBlue)
         case .control:
             return .primary
         }
@@ -736,13 +787,13 @@ private struct KeyboardButton: View {
         case .digit, .control:
             return Color.black.opacity(0.08)
         case .increment:
-            return Color(.systemBlue).opacity(0.15)
-        case .decrement:
-            return Color(.systemOrange).opacity(0.15)
-        case .special:
             return Color(.systemRed).opacity(0.15)
-        case .success:
+        case .decrement:
             return Color(.systemGreen).opacity(0.15)
+        case .special:
+            return Color(.systemOrange).opacity(0.15)
+        case .success:
+            return Color(.systemBlue).opacity(0.15)
         }
     }
 }
@@ -911,23 +962,128 @@ private struct ScoreTextField: UIViewRepresentable {
 private struct NamesSheet: View {
     @ObservedObject var vm: ScoreboardViewModel
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: Int?
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Namen") {
-                    ForEach(Array(vm.players.enumerated()), id: \.element.id) { (idx, player) in
-                        TextField("Spieler \(idx + 1)", text: Binding(
-                            get: { player.name },
-                            set: { vm.setName($0, for: idx) }
-                        ))
+                Section {
+                    ForEach(0..<6, id: \.self) { index in
+                        HStack(spacing: 12) {
+                            // Player indicator with cleaner styling
+                            Text("\(index + 1)")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(index < vm.players.count ? .white : .secondary)
+                                .frame(width: 32, height: 32)
+                                .background {
+                                    Circle()
+                                        .fill(
+                                            index < vm.players.count ?
+                                            AnyShapeStyle(Color.accentColor) :
+                                            AnyShapeStyle(Material.ultraThin)
+                                        )
+                                        .shadow(
+                                            color: index < vm.players.count ? 
+                                                Color.accentColor.opacity(0.3) : 
+                                                Color.clear,
+                                            radius: 2,
+                                            x: 0,
+                                            y: 1
+                                        )
+                                }
+                            
+                            // Text field with enhanced styling
+                            TextField("Spieler \(index + 1)", text: Binding(
+                                get: { vm.allNames.indices.contains(index) ? vm.allNames[index] : "Spieler \(index + 1)" },
+                                set: { newValue in
+                                    // Ensure allNames array has enough capacity
+                                    while vm.allNames.count <= index {
+                                        vm.allNames.append("Spieler \(vm.allNames.count + 1)")
+                                    }
+                                    let trimmedValue = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                                    vm.allNames[index] = trimmedValue.isEmpty ? "Spieler \(index + 1)" : trimmedValue
+                                    vm.setName(vm.allNames[index], for: index)
+                                }
+                            ))
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .focused($focusedField, equals: index)
+                            .submitLabel(.next)
+                            .onSubmit {
+                                // Move to next field or dismiss keyboard
+                                if index < 5 {
+                                    focusedField = index + 1
+                                } else {
+                                    focusedField = nil
+                                }
+                            }
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.words)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                } footer: {
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundStyle(.secondary)
+                        Text("\(vm.players.count) von 6 Spielern aktiv")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Namen bearbeiten")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarLeading) {
+                    Button("Abbrechen") {
+                        focusedField = nil
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button("Fertig") {
+                        // Apply default names for empty fields before closing
+                        for index in 0..<6 {
+                            if vm.allNames.indices.contains(index) {
+                                let trimmed = vm.allNames[index].trimmingCharacters(in: .whitespacesAndNewlines)
+                                if trimmed.isEmpty {
+                                    vm.allNames[index] = "Spieler \(index + 1)"
+                                    vm.setName(vm.allNames[index], for: index)
+                                }
+                            }
+                        }
+                        focusedField = nil
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+                
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    
+                    Button("Fertig") {
+                        focusedField = nil
+                    }
+                    .fontWeight(.medium)
+                }
+            }
+            .onAppear {
+                // Ensure allNames has all 6 entries with proper defaults
+                while vm.allNames.count < 6 {
+                    vm.allNames.append("Spieler \(vm.allNames.count + 1)")
+                }
+                // Ensure existing entries have proper defaults if empty
+                for index in 0..<6 {
+                    if vm.allNames[index].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        vm.allNames[index] = "Spieler \(index + 1)"
                     }
                 }
             }
-            .navigationTitle("Namen")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("OK") { dismiss() } } }
         }
         .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .interactiveDismissDisabled(focusedField != nil)
     }
 }
 
