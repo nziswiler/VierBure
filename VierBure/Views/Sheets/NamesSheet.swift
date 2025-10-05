@@ -29,7 +29,7 @@ struct NamesSheet: View {
                 }
             }
             .navigationTitle("Namen bearbeiten")
-            .navigationBarTitleDisplayMode(.large)
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarLeading) {
                     Button {

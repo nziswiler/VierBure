@@ -13,10 +13,6 @@ struct PlayerCountSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
-                Text("Spieleranzahl")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(.primary)
-
                 Picker("Spieler", selection: $selectedCount) {
                     ForEach(GameConstants.minPlayers...GameConstants.maxPlayers, id: \.self) { count in
                         Text("\(count)")
@@ -27,8 +23,10 @@ struct PlayerCountSheet: View {
                 .padding(.horizontal)
             }
             .padding()
+            .navigationTitle("Spieleranzahl")
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItemGroup(placement: .topBarLeading) {
                     Button {
                         dismiss()
                     } label: {
@@ -38,7 +36,8 @@ struct PlayerCountSheet: View {
                     .tint(.secondary)
                     .accessibilityLabel("Abbrechen")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         let validatedCount = ScoreValidator.validatePlayerCount(selectedCount)
                         onConfirm(validatedCount)
@@ -59,4 +58,3 @@ struct PlayerCountSheet: View {
         .presentationDragIndicator(.visible)
     }
 }
-
