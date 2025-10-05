@@ -9,17 +9,14 @@ enum ScoreValidator {
     static func validateTopScore(_ input: String) -> ValidationResult? {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Handle empty input
         if trimmed.isEmpty {
             return .success(0)
         }
 
-        // Try to parse as integer
         guard let value = Int(trimmed) else {
             return .failure(.invalidScoreValue)
         }
 
-        // Check bounds
         let clamped = max(GameConstants.minScoreValue, min(GameConstants.maxScoreValue, value))
         return .success(clamped)
     }
@@ -34,7 +31,6 @@ enum ScoreValidator {
     }
 
     static func isValidRoundSum(_ scores: [Int?], allowMatch: Bool = true) -> Bool {
-        // Check for match value
         if allowMatch && scores.contains(GameConstants.matchValue) {
             return true
         }

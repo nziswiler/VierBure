@@ -20,7 +20,6 @@ final class GameDataManager: GameDataManagerProtocol {
         let saved = userDefaults.stringArray(forKey: Keys.playerNames) ?? []
         var names = saved
 
-        // Ensure we always have exactly 6 names
         while names.count < GameConstants.maxPlayers {
             names.append(GameConstants.defaultPlayerNames[names.count])
         }

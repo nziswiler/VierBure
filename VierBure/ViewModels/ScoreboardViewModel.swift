@@ -34,7 +34,6 @@ final class ScoreboardViewModel: ObservableObject {
     }
 
     private func setupAutoSave() {
-        // Auto-save when game state changes
         Publishers.CombineLatest3($players, $rounds, $allPlayerNames)
             .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
             .sink { [weak self] players, rounds, names in
@@ -80,7 +79,6 @@ final class ScoreboardViewModel: ObservableObject {
         let validCount = max(GameConstants.minPlayers, min(GameConstants.maxPlayers, count))
 
         if validCount > players.count {
-            // Add new players
             let newPlayers = (players.count..<validCount).map { index in
                 var player = Player(name: allPlayerNames[index])
                 player.ensureScoreCapacity(for: rounds)
@@ -88,7 +86,6 @@ final class ScoreboardViewModel: ObservableObject {
             }
             players.append(contentsOf: newPlayers)
         } else if validCount < players.count {
-            // Remove players
             players = Array(players.prefix(validCount))
         }
 
@@ -117,10 +114,8 @@ final class ScoreboardViewModel: ObservableObject {
     }
 
     func updatePlayerName(_ name: String, at index: Int) {
-        // Allow spaces and empty names while editing; defaults are applied on Done in NamesSheet
         let finalName = String(name.prefix(10))
 
-        // Ensure allPlayerNames can hold this index
         if allPlayerNames.count <= index {
             let needed = index + 1 - allPlayerNames.count
             let start = allPlayerNames.count
@@ -136,10 +131,8 @@ final class ScoreboardViewModel: ObservableObject {
             }
         }
 
-        // Update the stored name (can be empty while editing)
         allPlayerNames[index] = finalName
 
-        // If the player exists in the active list, update the visible name as well
         if players.indices.contains(index) {
             players[index].name = finalName
         }
@@ -154,7 +147,6 @@ final class ScoreboardViewModel: ObservableObject {
                 players[playerIndex].scores[round].top = score
             }
         case .failure(let error):
-            // Handle error (could show alert or similar)
             print("Score validation error: \(error.localizedDescription)")
         }
     }
@@ -219,21 +211,22 @@ final class ScoreboardViewModel: ObservableObject {
     }
 
     func isRoundValid(_ round: Int) -> Bool {
-        // Only validate completed rounds
         guard round < rounds - 1 else { return true }
 
-        // Check if any player has a match
-        let hasMatch = players.contains { player in
-            guard round < player.scores.count else { return false }
-            return player.scores[round].top == GameConstants.matchValue
+        let matchCount = players.reduce(0) { count, player in
+            guard round < player.scores.count else { return count }
+            return player.scores[round].top == GameConstants.matchValue ? count + 1 : count
         }
 
-        if hasMatch { return true }
+        if matchCount > 1 { return false }
 
-        // Check if top scores sum to 157
         let totalTop = players.reduce(0) { sum, player in
             guard round < player.scores.count else { return sum }
             return sum + (player.scores[round].top ?? 0)
+        }
+
+        if matchCount == 1 {
+            return totalTop == -257
         }
 
         return totalTop == GameConstants.totalPointsPerRound
