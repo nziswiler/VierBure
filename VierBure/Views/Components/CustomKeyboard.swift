@@ -91,8 +91,8 @@ struct CustomKeyboard: View {
                 accessibilityLabel: "Löschen",
                 action: { DispatchQueue.main.async { onDelete() } }
             )
-            KeyboardButton(text: "Rest", style: .special, config: config) { DispatchQueue.main.async { onRest() } }
             KeyboardButton(text: "Match", style: .success, config: config) { DispatchQueue.main.async { onMatch() } }
+            KeyboardButton(text: "Rest", style: .special, config: config) { DispatchQueue.main.async { onRest() } }
             KeyboardButton(text: "Fertig", style: .control, config: config) { DispatchQueue.main.async { onDone() } }
         }
         .frame(height: config.keyHeight)

@@ -20,12 +20,10 @@ class GlobalKeyboardManager: ObservableObject {
         onMatch: @escaping () -> Void,
         onDone: @escaping () -> Void
     ) -> UIInputView {
-        // Berechne Dimensionen basierend auf dem aktuellen Screen
         let width = UIScreen.main.bounds.width
         let config = KeyboardConfiguration(width: width)
         let totalHeight = config.calculateTotalHeight()
         
-        // Erstelle CustomKeyboard View
         let keyboard = CustomKeyboard(
             onDigit: onDigit,
             onDelete: onDelete,
@@ -41,28 +39,41 @@ class GlobalKeyboardManager: ObservableObject {
             onDone: onDone
         )
 
-        // Erstelle HostingController für SwiftUI View
         let hostingController = UIHostingController(rootView: keyboard)
         hostingController.view.backgroundColor = .clear
         
-        // Erstelle UIInputView mit fester Größe
-        let inputView = UIInputView(
+        let inputView = KeyboardInputView(
             frame: CGRect(x: 0, y: 0, width: width, height: totalHeight),
-            inputViewStyle: .keyboard
+            inputViewStyle: .keyboard,
+            hostingController: hostingController
         )
         
-        // Konfiguriere InputView Properties
         inputView.allowsSelfSizing = false
         inputView.translatesAutoresizingMaskIntoConstraints = true
         
-        // Konfiguriere HostingController View
         hostingController.view.frame = inputView.bounds
         hostingController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         hostingController.view.translatesAutoresizingMaskIntoConstraints = true
 
-        // Füge HostingController View zur InputView hinzu
         inputView.addSubview(hostingController.view)
 
         return inputView
+    }
+}
+
+private final class KeyboardInputView: UIInputView {
+    private weak var hostingController: UIHostingController<CustomKeyboard>?
+    
+    init(frame: CGRect, inputViewStyle: UIInputView.Style, hostingController: UIHostingController<CustomKeyboard>) {
+        self.hostingController = hostingController
+        super.init(frame: frame, inputViewStyle: inputViewStyle)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        subviews.forEach { $0.removeFromSuperview() }
     }
 }

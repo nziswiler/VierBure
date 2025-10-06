@@ -12,7 +12,6 @@ struct NamesSheet: View {
         self.allPlayerNames = Binding(
             get: { viewModel.allPlayerNames },
             set: { newNames in
-                // This will be handled through individual name updates
             }
         )
     }

@@ -24,7 +24,6 @@ struct ScoreTable: View {
                     )
                     .id("controls")
                 }
-                .animation(.easeInOut(duration: 0.3), value: viewModel.players)
                 .animation(.easeInOut(duration: 0.3), value: viewModel.rounds)
                 .padding(.bottom, 12)
                 .contentShape(Rectangle())
@@ -37,25 +36,20 @@ struct ScoreTable: View {
             .onChange(of: viewModel.selectedCell) { oldValue, newValue in
                 guard let selected = newValue else { return }
                 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s
                     withAnimation(.easeOut(duration: 0.25)) {
                         proxy.scrollTo(selected.round, anchor: .center)
                     }
                 }
             }
             .onChange(of: viewModel.rounds) { oldValue, newValue in
-                if newValue > oldValue {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(.easeOut(duration: 0.35)) {
-                            proxy.scrollTo("controls", anchor: .bottom)
-                        }
-                    }
-                }
-                else if newValue < oldValue && newValue > 0 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(.easeOut(duration: 0.35)) {
-                            proxy.scrollTo("controls", anchor: .bottom)
-                        }
+                guard newValue != oldValue else { return }
+                
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
+                    withAnimation(.easeOut(duration: 0.35)) {
+                        proxy.scrollTo("controls", anchor: .bottom)
                     }
                 }
             }

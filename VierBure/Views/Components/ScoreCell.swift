@@ -67,7 +67,8 @@ struct ScoreCell: View {
             if isEnabled {
                 onSelect()
                 // Verzögertes Fokussieren für bessere Zuverlässigkeit
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 50_000_000) // 0.05s
                     shouldFocus = true
                 }
             }

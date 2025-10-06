@@ -8,7 +8,6 @@ struct KeyboardButton: View {
     private let accessibilityLabel: String?
     private let action: () -> Void
 
-    // Reuse haptic generators for better performance
     private static let lightGenerator = UIImpactFeedbackGenerator(style: .light)
     private static let mediumGenerator = UIImpactFeedbackGenerator(style: .medium)
 

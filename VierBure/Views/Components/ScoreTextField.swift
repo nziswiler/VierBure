@@ -43,26 +43,16 @@ struct ScoreTextField: UIViewRepresentable {
         }
         
         // Update enabled state
-        let wasEnabled = uiView.isUserInteractionEnabled
         uiView.isUserInteractionEnabled = isEnabled
         
         // Handle focus changes
-        if isEnabled && shouldFocus {
-            if !uiView.isFirstResponder {
-                // Verwende einen RunLoop-basierten Ansatz für besseres Timing
-                DispatchQueue.main.async {
-                    uiView.becomeFirstResponder()
-                }
-            }
-            // Reset shouldFocus flag
-            DispatchQueue.main.async {
+        if isEnabled && shouldFocus && !uiView.isFirstResponder {
+            // Verwende Task für besseres async Management
+            Task { @MainActor in
+                uiView.becomeFirstResponder()
                 self.shouldFocus = false
             }
         } else if !isEnabled && uiView.isFirstResponder {
-            // Resigniere nur wenn das Field disabled wurde
-            uiView.resignFirstResponder()
-        } else if wasEnabled && !isEnabled && uiView.isFirstResponder {
-            // Cleanup wenn disabled wird
             uiView.resignFirstResponder()
         }
     }
