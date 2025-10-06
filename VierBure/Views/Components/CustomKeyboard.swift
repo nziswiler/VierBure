@@ -84,9 +84,6 @@ struct CustomKeyboard: View {
 
     private func actionRow(config: KeyboardConfiguration) -> some View {
         HStack(spacing: config.spacing) {
-            KeyboardButton(text: "Fertig", style: .control, config: config) { DispatchQueue.main.async { onDone() } }
-            KeyboardButton(text: "Rest", style: .special, config: config) { DispatchQueue.main.async { onRest() } }
-            KeyboardButton(text: "Match", style: .success, config: config) { DispatchQueue.main.async { onMatch() } }
             KeyboardButton(
                 systemImage: "delete.left.fill",
                 style: .control,
@@ -94,6 +91,9 @@ struct CustomKeyboard: View {
                 accessibilityLabel: "Löschen",
                 action: { DispatchQueue.main.async { onDelete() } }
             )
+            KeyboardButton(text: "Rest", style: .special, config: config) { DispatchQueue.main.async { onRest() } }
+            KeyboardButton(text: "Match", style: .success, config: config) { DispatchQueue.main.async { onMatch() } }
+            KeyboardButton(text: "Fertig", style: .control, config: config) { DispatchQueue.main.async { onDone() } }
         }
         .frame(height: config.keyHeight)
     }
