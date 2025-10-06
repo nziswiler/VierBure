@@ -59,7 +59,6 @@ extension ScoreTextField {
     final class Coordinator: NSObject, UITextFieldDelegate {
         private let parent: ScoreTextField
         private weak var textField: UITextField?
-        private var hostingController: UIHostingController<CustomKeyboard>?
 
         init(_ parent: ScoreTextField) {
             self.parent = parent
@@ -68,7 +67,7 @@ extension ScoreTextField {
         func configure(for textField: UITextField) {
             self.textField = textField
 
-            let keyboard = CustomKeyboard(
+            let inputView = GlobalKeyboardManager.shared.getKeyboardInputView(
                 onDigit: { [weak self] digit in
                     self?.appendDigit(digit)
                 },
@@ -89,30 +88,7 @@ extension ScoreTextField {
                 }
             )
 
-            let hostingController = UIHostingController(rootView: keyboard)
-            hostingController.view.backgroundColor = .clear
-
-            let inputView = UIInputView(frame: .zero, inputViewStyle: .keyboard)
-            inputView.translatesAutoresizingMaskIntoConstraints = false
-            hostingController.view.translatesAutoresizingMaskIntoConstraints = false
-
-            inputView.addSubview(hostingController.view)
-
-            NSLayoutConstraint.activate([
-                hostingController.view.leadingAnchor.constraint(equalTo: inputView.leadingAnchor),
-                hostingController.view.trailingAnchor.constraint(equalTo: inputView.trailingAnchor),
-                hostingController.view.topAnchor.constraint(equalTo: inputView.topAnchor),
-                hostingController.view.bottomAnchor.constraint(equalTo: inputView.bottomAnchor)
-            ])
-
-            let width = UIScreen.main.bounds.width
-            let config = KeyboardConfiguration(width: width)
-            let totalHeight = config.calculateTotalHeight()
-
-            inputView.heightAnchor.constraint(equalToConstant: totalHeight).isActive = true
             textField.inputView = inputView
-
-            self.hostingController = hostingController
         }
 
         @objc func textDidChange(_ textField: UITextField) {
