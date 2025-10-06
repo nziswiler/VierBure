@@ -24,7 +24,6 @@ struct ScoreboardView: View {
                 )
                 .padding(.horizontal, 8)
             }
-            .padding(.bottom)
             .navigationTitle("Vier Bure")
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

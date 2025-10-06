@@ -23,11 +23,6 @@ struct ScoreTable: View {
                         onClearSelection: viewModel.clearSelection
                     )
                     .id("controls")
-
-                    // Platzhalter für Keyboard-Platz
-                    Color.clear
-                        .frame(height: 300)
-                        .id("spacer")
                 }
                 .animation(.easeInOut(duration: 0.3), value: viewModel.players)
                 .animation(.easeInOut(duration: 0.3), value: viewModel.rounds)
@@ -40,26 +35,30 @@ struct ScoreTable: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: viewModel.selectedCell) { oldValue, newValue in
-                // Scrolle nur wenn eine Zelle ausgewählt wurde (nicht beim Deselektieren)
                 guard let selected = newValue else { return }
                 
-                // Scrolle nur wenn die Zelle außerhalb des sichtbaren Bereichs liegt
-                // oder wenn es eine späte Runde ist (ab Runde 4)
-                if selected.round >= 4 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     withAnimation(.easeOut(duration: 0.25)) {
                         proxy.scrollTo(selected.round, anchor: .center)
                     }
                 }
             }
+            .onChange(of: viewModel.rounds) { oldValue, newValue in
+                if newValue > oldValue {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.easeOut(duration: 0.35)) {
+                            proxy.scrollTo("controls", anchor: .bottom)
+                        }
+                    }
+                }
+                else if newValue < oldValue && newValue > 0 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.easeOut(duration: 0.35)) {
+                            proxy.scrollTo("controls", anchor: .bottom)
+                        }
+                    }
+                }
+            }
         }
-    }
-
-    private func dismissKeyboard() {
-        UIApplication.shared.sendAction(
-            #selector(UIResponder.resignFirstResponder),
-            to: nil,
-            from: nil,
-            for: nil
-        )
     }
 }
