@@ -65,8 +65,11 @@ struct ScoreCell: View {
         )
         .onTapGesture {
             if isEnabled {
-                shouldFocus = true
                 onSelect()
+                // Verzögertes Fokussieren für bessere Zuverlässigkeit
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    shouldFocus = true
+                }
             }
         }
         .accessibilityElement(children: .combine)

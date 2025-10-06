@@ -8,8 +8,6 @@ struct KeyboardButton: View {
     private let accessibilityLabel: String?
     private let action: () -> Void
 
-    @State private var isPressed = false
-
     // Reuse haptic generators for better performance
     private static let lightGenerator = UIImpactFeedbackGenerator(style: .light)
     private static let mediumGenerator = UIImpactFeedbackGenerator(style: .medium)
@@ -45,7 +43,10 @@ struct KeyboardButton: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            provideHapticFeedback()
+            action()
+        }) {
             ZStack {
                 buttonBackground
 
@@ -64,18 +65,10 @@ struct KeyboardButton: View {
                         .shadow(color: .black.opacity(0.05), radius: 0.5, x: 0, y: 0.5)
                 }
             }
-            .scaleEffect(isPressed ? 0.96 : 1.0)
-            .animation(isPressed ? .easeOut(duration: 0.05) : .spring(duration: 0.25, bounce: 0.3), value: isPressed)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .buttonStyle(PlainButtonStyle())
         .contentShape(Rectangle())
-        .onPressedChange { pressed in
-            isPressed = pressed
-            if pressed {
-                provideHapticFeedback()
-            }
-        }
         .accessibilityLabel(accessibilityLabel ?? text ?? "")
     }
 
@@ -87,7 +80,7 @@ struct KeyboardButton: View {
                     .stroke(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(isPressed ? 0.1 : 0.25),
+                                Color.white.opacity(0.25),
                                 Color.clear
                             ],
                             startPoint: .topLeading,
@@ -98,9 +91,9 @@ struct KeyboardButton: View {
             }
             .shadow(
                 color: shadowColor,
-                radius: isPressed ? 0 : 1.5,
+                radius: 1.5,
                 x: 0,
-                y: isPressed ? 0 : 0.5
+                y: 0.5
             )
     }
 

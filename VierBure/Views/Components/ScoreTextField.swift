@@ -37,16 +37,33 @@ struct ScoreTextField: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UITextField, context: Context) {
+        // Update text nur wenn es sich geändert hat
         if uiView.text != text {
             uiView.text = text
         }
+        
+        // Update enabled state
+        let wasEnabled = uiView.isUserInteractionEnabled
         uiView.isUserInteractionEnabled = isEnabled
-
-        if isEnabled && shouldFocus && !uiView.isFirstResponder {
-            uiView.becomeFirstResponder()
+        
+        // Handle focus changes
+        if isEnabled && shouldFocus {
+            if !uiView.isFirstResponder {
+                // Verwende einen RunLoop-basierten Ansatz für besseres Timing
+                DispatchQueue.main.async {
+                    uiView.becomeFirstResponder()
+                }
+            }
+            // Reset shouldFocus flag
             DispatchQueue.main.async {
                 self.shouldFocus = false
             }
+        } else if !isEnabled && uiView.isFirstResponder {
+            // Resigniere nur wenn das Field disabled wurde
+            uiView.resignFirstResponder()
+        } else if wasEnabled && !isEnabled && uiView.isFirstResponder {
+            // Cleanup wenn disabled wird
+            uiView.resignFirstResponder()
         }
     }
 

@@ -14,11 +14,9 @@ struct CustomKeyboard: View {
     let onMatch: () -> Void
     let onDone: () -> Void
 
-    @State private var cachedConfig: KeyboardConfiguration?
-
     var body: some View {
         GeometryReader { proxy in
-            let config = cachedConfig ?? KeyboardConfiguration(width: proxy.size.width)
+            let config = KeyboardConfiguration(width: proxy.size.width)
 
             VStack(spacing: config.spacing) {
                 numberRow(config: config)
@@ -30,11 +28,6 @@ struct CustomKeyboard: View {
             .padding(config.containerPadding)
             .background {
                 keyboardBackground
-            }
-            .onAppear {
-                if cachedConfig == nil {
-                    cachedConfig = config
-                }
             }
         }
     }

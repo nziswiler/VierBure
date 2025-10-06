@@ -4,9 +4,6 @@ import UIKit
 class GlobalKeyboardManager: ObservableObject {
     static let shared = GlobalKeyboardManager()
 
-    private var hostingController: UIHostingController<CustomKeyboard>?
-    private var inputView: UIInputView?
-
     private init() {}
 
     func getKeyboardInputView(
@@ -23,6 +20,12 @@ class GlobalKeyboardManager: ObservableObject {
         onMatch: @escaping () -> Void,
         onDone: @escaping () -> Void
     ) -> UIInputView {
+        // Berechne Dimensionen basierend auf dem aktuellen Screen
+        let width = UIScreen.main.bounds.width
+        let config = KeyboardConfiguration(width: width)
+        let totalHeight = config.calculateTotalHeight()
+        
+        // Erstelle CustomKeyboard View
         let keyboard = CustomKeyboard(
             onDigit: onDigit,
             onDelete: onDelete,
@@ -38,30 +41,27 @@ class GlobalKeyboardManager: ObservableObject {
             onDone: onDone
         )
 
+        // Erstelle HostingController für SwiftUI View
         let hostingController = UIHostingController(rootView: keyboard)
         hostingController.view.backgroundColor = .clear
+        
+        // Erstelle UIInputView mit fester Größe
+        let inputView = UIInputView(
+            frame: CGRect(x: 0, y: 0, width: width, height: totalHeight),
+            inputViewStyle: .keyboard
+        )
+        
+        // Konfiguriere InputView Properties
+        inputView.allowsSelfSizing = false
+        inputView.translatesAutoresizingMaskIntoConstraints = true
+        
+        // Konfiguriere HostingController View
+        hostingController.view.frame = inputView.bounds
+        hostingController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        hostingController.view.translatesAutoresizingMaskIntoConstraints = true
 
-        let inputView = UIInputView(frame: .zero, inputViewStyle: .keyboard)
-        inputView.translatesAutoresizingMaskIntoConstraints = false
-        hostingController.view.translatesAutoresizingMaskIntoConstraints = false
-
+        // Füge HostingController View zur InputView hinzu
         inputView.addSubview(hostingController.view)
-
-        NSLayoutConstraint.activate([
-            hostingController.view.leadingAnchor.constraint(equalTo: inputView.leadingAnchor),
-            hostingController.view.trailingAnchor.constraint(equalTo: inputView.trailingAnchor),
-            hostingController.view.topAnchor.constraint(equalTo: inputView.topAnchor),
-            hostingController.view.bottomAnchor.constraint(equalTo: inputView.bottomAnchor)
-        ])
-
-        let width = UIScreen.main.bounds.width
-        let config = KeyboardConfiguration(width: width)
-        let totalHeight = config.calculateTotalHeight()
-
-        inputView.heightAnchor.constraint(equalToConstant: totalHeight).isActive = true
-
-        self.hostingController = hostingController
-        self.inputView = inputView
 
         return inputView
     }
